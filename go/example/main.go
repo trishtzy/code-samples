@@ -32,12 +32,8 @@ func main() {
 		return err
 	}, "Failed to get system config", false)
 
-	// Step 1.1: Generate ethereum account
-	_, ethereumPublicKey := auth.GetEthereumAccount()
-	fmt.Printf("Ethereum public key: %s\n", ethereumPublicKey)
-
-	// Step 1.2: Generate paradex L2 account
-	dexPrivateKey, dexPublicKey, dexAccountAddress := auth.GenerateParadexAccountOld(
+	// Step 1.1: Generate paradex L2 account
+	dexPrivateKey, dexPublicKey, dexAccountAddress := auth.GenerateParadexAccount(
 		*configResp.GetPayload(), config.App.EthereumPrivateKey)
 	fmt.Printf("Paradex L2 account: %s\n", dexAccountAddress)
 	fmt.Printf("Paradex L2 private key: %s\n", dexPrivateKey)

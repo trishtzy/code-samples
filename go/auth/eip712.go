@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/signer/core/apitypes"
 	"github.com/tradeparadex/api/config"
@@ -39,7 +38,7 @@ const primaryType = "Constant"
 var domainStandard = apitypes.TypedDataDomain{
 	Name:    "Paradex",
 	Version: "1",
-	ChainId: math.NewHexOrDecimal256(config.App.GetChainID()),
+	ChainId: config.App.GetChainIDBigInt(), // unused
 }
 
 var messageStandard = map[string]interface{}{
@@ -72,7 +71,7 @@ func SignTypedData(typedData apitypes.TypedData, privateKey *ecdsa.PrivateKey) (
 func EncodeForSigning(typedData apitypes.TypedData) (common.Hash, error) {
 	var hash common.Hash
 
-	domainSeparator, err := typedData.HashStruct("EIP712Domain", typedData.Domain.Map())
+	domainSeparator, err := typedData.HashStruct("EIP712Domain", mapDomain(typedData.Domain))
 	if err != nil {
 		return hash, err
 	}

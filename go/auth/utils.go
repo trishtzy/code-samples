@@ -17,6 +17,7 @@ import (
 	"github.com/dontpanicdao/caigo"
 	"github.com/dontpanicdao/caigo/types"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/signer/core/apitypes"
 	"github.com/tradeparadex/api/config"
 	"github.com/tradeparadex/api/models"
 )
@@ -136,19 +137,6 @@ func GenerateParadexAccount(sysConfig models.ResponsesSystemConfigResponse, ethP
 	return dexPrivateKey, dexPublicKey, dexAccountAddress
 }
 
-// TODO: Generate Paradex private key from Ethereum private key
-func GenerateParadexAccountOld(sysConfig models.ResponsesSystemConfigResponse, ethPrivateKey string) (string, string, string) {
-	if config.App.ParadexPrivateKey == "" {
-		panic("PARADEX_PRIVATE_KEY is not set")
-	}
-	dexPrivateKey := config.App.ParadexPrivateKey
-	dexPrivateKeyBN := types.HexToBN(dexPrivateKey)
-	dexPublicKeyBN, _, _ := caigo.Curve.PrivateToPoint(dexPrivateKeyBN)
-	dexPublicKey := types.BigToHex(dexPublicKeyBN)
-	dexAccountAddress := ComputeAddress(sysConfig, dexPublicKey)
-	return dexPrivateKey, dexPublicKey, dexAccountAddress
-}
-
 // Get ECDSA private key from string
 func GetEcdsaPrivateKey(pk string) *ecdsa.PrivateKey {
 	privateKey := types.StrToFelt(pk).Big()
@@ -175,4 +163,30 @@ func GnarkSign(messageHash *big.Int, privateKey string) (r, s *big.Int, err erro
 	r = new(big.Int).SetBytes(sigBin[:fr.Bytes])
 	s = new(big.Int).SetBytes(sigBin[fr.Bytes:])
 	return r, s, nil
+}
+
+// mapDomain is a helper function to generate a map version of the domain
+func mapDomain(domain apitypes.TypedDataDomain) map[string]interface{} {
+	dataMap := map[string]interface{}{}
+
+	if domain.ChainId != nil {
+		dataMap["chainId"] = config.App.ChainID // override with chainId from config
+	}
+
+	if len(domain.Name) > 0 {
+		dataMap["name"] = domain.Name
+	}
+
+	if len(domain.Version) > 0 {
+		dataMap["version"] = domain.Version
+	}
+
+	if len(domain.VerifyingContract) > 0 {
+		dataMap["verifyingContract"] = domain.VerifyingContract
+	}
+
+	if len(domain.Salt) > 0 {
+		dataMap["salt"] = domain.Salt
+	}
+	return dataMap
 }
