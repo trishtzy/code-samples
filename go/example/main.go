@@ -20,7 +20,7 @@ func main() {
 
 	// Create a client configuration
 	clientConfig := client.DefaultTransportConfig().
-		WithHost("api.nightly.paradex.trade").
+		WithHost("api.testnet.paradex.trade").
 		WithBasePath("/v1").
 		WithSchemes([]string{"https"})
 

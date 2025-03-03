@@ -11,7 +11,7 @@ import (
 
 type config struct {
 	EthereumPrivateKey string `env:"ETHEREUM_PRIVATE_KEY"`
-	Env                string `env:"ENV" envDefault:"nightly"` // nightly, testnet, mainnet
+	Env                string `env:"ENV" envDefault:"testnet"` // nightly, testnet, mainnet
 	ChainID            string `env:"PARADEX_CHAIN_ID" envDefault:"11155111"`
 	ParadexVersion     string `env:"PARADEX_VERSION" envDefault:"1"`
 }
