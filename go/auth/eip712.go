@@ -71,7 +71,11 @@ func SignTypedData(typedData apitypes.TypedData, privateKey *ecdsa.PrivateKey) (
 func EncodeForSigning(typedData apitypes.TypedData) (common.Hash, error) {
 	var hash common.Hash
 
-	domainSeparator, err := typedData.HashStruct("EIP712Domain", mapDomain(typedData.Domain))
+	domainDataPayload := typedData.Domain.Map()
+	// TODO: Check if serialised value is in hex. If yes, replace it with decimal
+	domainDataPayload["chainId"] = config.App.ChainID // override with chainId from config
+
+	domainSeparator, err := typedData.HashStruct("EIP712Domain", domainDataPayload)
 	if err != nil {
 		return hash, err
 	}
