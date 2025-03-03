@@ -6,6 +6,8 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"strconv"
+	"time"
 
 	"github.com/go-openapi/runtime"
 	"github.com/go-openapi/strfmt"
@@ -49,7 +51,11 @@ func main() {
 
 	// Step 2: Onboarding
 	onboardingParams := authentication.NewOnboardingParams()
-	starknetSignature := auth.SignSNTypedData("onboarding", dexAccountAddress, dexPrivateKey)
+	starknetSignature := auth.SignSNTypedData(auth.SignerParams{
+		MessageType:       "onboarding",
+		DexAccountAddress: dexAccountAddress,
+		DexPrivateKey:     dexPrivateKey,
+	})
 	// Set request headers for onboarding
 	onboardingParams.SetPARADEXETHEREUMACCOUNT(ethereumAddress)
 	onboardingParams.SetPARADEXSTARKNETACCOUNT(dexAccountAddress)
@@ -65,16 +71,30 @@ func main() {
 	}
 	fmt.Printf("Onboarding successful: %v\n", onboardingResp.Code())
 
-	// // Step 3: Authenticate to get JWT token
-	// authParams := authentication.NewAuthParams()
-	// // Set necessary headers or body parameters for authentication
-	// var authResp *authentication.AuthOK
-	// handleAPICall(func() error {
-	// 	var err error
-	// 	authResp, err = api.Authentication.Auth(authParams)
-	// 	return err
-	// }, "Authentication failed", true)
-	// jwt := authResp.Payload.JwtToken
+	// Step 3: Authenticate to get JWT token
+	authParams := authentication.NewAuthParams()
+	// Set necessary headers or body parameters for authentication
+	now := time.Now().Unix()
+	timestampStr := strconv.FormatInt(now, 10)
+	expirationStr := strconv.FormatInt(now+auth.DEFAULT_EXPIRY_IN_SECONDS, 10)
+	starknetJwtSignature := auth.SignSNTypedData(auth.SignerParams{
+		MessageType:       "auth",
+		DexAccountAddress: dexAccountAddress,
+		DexPrivateKey:     dexPrivateKey,
+		TimestampStr:      timestampStr,
+		ExpirationStr:     expirationStr,
+	})
+	authParams.SetPARADEXSTARKNETSIGNATURE(starknetJwtSignature)
+	authParams.SetPARADEXSTARKNETACCOUNT(dexAccountAddress)
+	authParams.SetPARADEXTIMESTAMP(timestampStr)
+	authParams.SetPARADEXSIGNATUREEXPIRATION(&expirationStr)
+
+	authResp, err := api.Authentication.Auth(authParams)
+	if err != nil {
+		fmt.Printf("Authentication failed: %v\n", err)
+	}
+	jwt := authResp.Payload.JwtToken
+	fmt.Printf("JWT token: %s\n", jwt)
 
 	// // Create bearer token authentication for subsequent calls
 	// bearerAuth := httptransport.BearerToken(jwt)
