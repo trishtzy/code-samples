@@ -69,11 +69,15 @@ import (
     "github.com/tradeparadex/api/client/account"
 )
 
+// Create bearer token authentication for subsequent calls
+jwt := "JWT_TOKEN"
+bearerAuth := httptransport.BearerToken(jwt)
+
 // Create params
 params := account.NewGetBalanceParams()
 
 // Make API call
-balance, err := api.Account.GetBalance(params, nil)
+balance, err := api.Account.GetBalance(params, bearerAuth)
 if err != nil {
     log.Fatal(err)
 }
@@ -91,42 +95,47 @@ import (
     "github.com/tradeparadex/api/models"
 )
 
+// Create bearer token authentication for subsequent calls
+jwt := "JWT_TOKEN"
+bearerAuth := httptransport.BearerToken(jwt)
+
 // Create order params with authentication
-params := orders.NewOrdersPostParams().WithBody(&models.OrderRequest{
-    Market:   "ETH-USD",
-    Side:     "BUY",
-    Size:     "1.0",
-    Price:    "1500.00",
-    Type:     "LIMIT",
-    ClientID: "my-order-1",
-})
+orderParams := orders.NewOrdersNewParams()
+	market := "ETH-USD-PERP"
+	price := "1000"
+	size := "1"
+	now = time.Now().UnixMilli()
+	orderSignature := auth.SignSNTypedData(auth.SignerParams{
+		MessageType:       "order",
+		DexAccountAddress: dexAccountAddress,
+		DexPrivateKey:     dexPrivateKey,
+		Params: map[string]interface{}{
+			"timestamp": now,
+			"market":    market,
+			"side":      "BUY",
+			"orderType": "LIMIT",
+			"size":      size,
+			"price":     price,
+		},
+	})
 
 // Make authenticated API call
-order, err := api.Orders.OrdersPost(params, nil)
-if err != nil {
-    log.Fatal(err)
-}
+orderParams.SetParams(&models.RequestsOrderRequest{
+		ClientID:           "client-id",
+		Type:               struct{ models.ResponsesOrderType }{models.ResponsesOrderType("LIMIT")},
+		Side:               struct{ models.ResponsesOrderSide }{models.ResponsesOrderSide("BUY")},
+		Market:             &market,
+		Price:              &price,
+		Size:               &size,
+		Signature:          &orderSignature,
+		SignatureTimestamp: &now,
+	})
 
-fmt.Printf("Order placed: %+v\n", order)
-```
-
-### Error Handling
-
-```go
-import (
-    "github.com/go-openapi/runtime"
-)
-
-resp, err := api.Account.GetBalance(params, nil)
-if err != nil {
-    switch e := err.(type) {
-    case *runtime.APIError:
-        fmt.Printf("API Error: %v (code: %d)\n", e.Error(), e.Code)
-    default:
-        fmt.Printf("Error: %v\n", err)
-    }
-    return
-}
+	orderResp, err := api.Orders.OrdersNew(orderParams, bearerAuth)
+	if err != nil {
+		fmt.Printf("Failed to place order: %v\n", err)
+	}
+	fmt.Printf("Order placed successfully: %v\n", orderResp.Code())
 ```
 
 ## Available Services
