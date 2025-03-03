@@ -1,18 +1,14 @@
 package main
 
 import (
-	"bytes"
 	"fmt"
-	"io"
-	"log"
-	"net/http"
 	"strconv"
 	"time"
 
-	"github.com/go-openapi/runtime"
-	"github.com/go-openapi/strfmt"
+	httptransport "github.com/go-openapi/runtime/client"
 	"github.com/tradeparadex/api/auth"
 	"github.com/tradeparadex/api/client"
+	"github.com/tradeparadex/api/client/account"
 	"github.com/tradeparadex/api/client/authentication"
 	"github.com/tradeparadex/api/client/system"
 	"github.com/tradeparadex/api/config"
@@ -94,50 +90,17 @@ func main() {
 		fmt.Printf("Authentication failed: %v\n", err)
 	}
 	jwt := authResp.Payload.JwtToken
-	fmt.Printf("JWT token: %s\n", jwt)
 
-	// // Create bearer token authentication for subsequent calls
-	// bearerAuth := httptransport.BearerToken(jwt)
+	// Create bearer token authentication for subsequent calls
+	bearerAuth := httptransport.BearerToken(jwt)
 
-	// // Example 1: Get account balance
-	// balanceParams := account.NewGetBalanceParams()
-	// var balance *account.GetBalanceOK
-	// handleAPICall(func() error {
-	// 	var err error
-	// 	balance, err = api.Account.GetBalance(balanceParams, bearerAuth)
-	// 	return err
-	// }, "Failed to get balance", false)
-	// fmt.Println("Account Balance:")
-	// fmt.Printf("  Balance details: %v\n", balance.Payload)
-	// fmt.Println()
-
-	// // Example 2: Get markets information
-	// marketsParams := markets.NewGetMarketsParams()
-	// var marketsResp *markets.GetMarketsOK
-	// handleAPICall(func() error {
-	// 	var err error
-	// 	marketsResp, err = api.Markets.GetMarkets(marketsParams)
-	// 	return err
-	// }, "Failed to get markets", false)
-	// fmt.Println("Available Markets:")
-	// for _, market := range marketsResp.GetPayload().Results {
-	// 	fmt.Printf("  Market details: %v\n", market)
-	// }
-	// fmt.Println()
-}
-
-// handleAPICall wraps API calls with consistent error handling
-func handleAPICall(fn func() error, errMsg string, fatal bool) {
-	if err := fn(); err != nil {
-		switch e := err.(type) {
-		case *runtime.APIError:
-			fmt.Printf("API Error: %v (code: %d)\n", e.Error(), e.Code)
-		default:
-			fmt.Printf("Error: %v\n", err)
-		}
-		if fatal {
-			log.Fatal(errMsg)
-		}
-		return
+	// Example 1: Get account balance
+	balanceParams := account.NewGetBalanceParams()
+	balance, err := api.Account.GetBalance(balanceParams, bearerAuth)
+	if err != nil {
+		fmt.Printf("Failed to get balance: %v\n", err)
 	}
+	fmt.Println("Account Balance:")
+	fmt.Printf("  Balance details: %+v\n", balance.GetPayload().Results[0])
+	fmt.Println()
 }
