@@ -11,6 +11,7 @@ import (
 
 type config struct {
 	EthereumPrivateKey string `env:"ETHEREUM_PRIVATE_KEY"`
+	Env                string `env:"ENV" envDefault:"nightly"` // nightly, testnet, mainnet
 	ChainID            string `env:"PARADEX_CHAIN_ID" envDefault:"11155111"`
 	ParadexVersion     string `env:"PARADEX_VERSION" envDefault:"1"`
 }
@@ -32,4 +33,17 @@ func (cfg config) GetChainID() int64 {
 func (cfg config) GetChainIDBigInt() *math.HexOrDecimal256 {
 	chainID := big.NewInt(cfg.GetChainID())
 	return (*math.HexOrDecimal256)(chainID)
+}
+
+func (cfg config) GetChainIDName() string {
+	switch cfg.Env {
+	case "nightly":
+		return "PRIVATE_SN_POTC_MOCK_SEPOLIA"
+	case "testnet":
+		return "PRIVATE_SN_POTC_SEPOLIA"
+	case "mainnet":
+		return "PRIVATE_SN_PARACLEAR_MAINNET"
+	default:
+		return ""
+	}
 }

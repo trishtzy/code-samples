@@ -1,14 +1,20 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
+	"io"
 	"log"
+	"net/http"
 
 	"github.com/go-openapi/runtime"
+	"github.com/go-openapi/strfmt"
 	"github.com/tradeparadex/api/auth"
 	"github.com/tradeparadex/api/client"
+	"github.com/tradeparadex/api/client/authentication"
 	"github.com/tradeparadex/api/client/system"
 	"github.com/tradeparadex/api/config"
+	"github.com/tradeparadex/api/models"
 )
 
 func main() {
@@ -25,12 +31,10 @@ func main() {
 
 	// Step 1: Get system config
 	configParams := system.NewGetSystemConfigParams()
-	var configResp *system.GetSystemConfigOK
-	handleAPICall(func() error {
-		var err error
-		configResp, err = api.System.GetSystemConfig(configParams)
-		return err
-	}, "Failed to get system config", false)
+	configResp, err := api.System.GetSystemConfig(configParams)
+	if err != nil {
+		fmt.Printf("Failed to get system config: %v\n", err)
+	}
 
 	// Step 1.1: Generate paradex L2 account
 	dexPrivateKey, dexPublicKey, dexAccountAddress := auth.GenerateParadexAccount(
@@ -39,21 +43,27 @@ func main() {
 	fmt.Printf("Paradex L2 private key: %s\n", dexPrivateKey)
 	fmt.Printf("Paradex L2 public key: %s\n", dexPublicKey)
 
-	// // Step 2: Onboarding
-	// onboardingParams := authentication.NewOnboardingParams()
-	// starknetSignature := signer.SignTypedData("onboarding", dexAccountAddress)
-	// onboardingParams.SetPARADEXETHEREUMACCOUNT(ethereumPublicKey)
-	// onboardingParams.SetPARADEXSTARKNETACCOUNT(dexAccountAddress)
-	// onboardingParams.SetPARADEXSTARKNETSIGNATURE(starknetSignature)
+	// Step 1.2: Generate Ethereum public key
+	_, ethereumAddress := auth.GetEthereumAccount()
+	fmt.Printf("Ethereum address: %s\n", ethereumAddress)
 
-	// // Set necessary parameters for onboarding
-	// var onboardingResp *authentication.OnboardingOK
-	// handleAPICall(func() error {
-	// 	var err error
-	// 	onboardingResp, err = api.Authentication.Onboarding(onboardingParams)
-	// 	return err
-	// }, "Onboarding failed", true)
-	// fmt.Printf("Onboarding successful: %v\n", onboardingResp.Code())
+	// Step 2: Onboarding
+	onboardingParams := authentication.NewOnboardingParams()
+	starknetSignature := auth.SignSNTypedData("onboarding", dexAccountAddress, dexPrivateKey)
+	// Set request headers for onboarding
+	onboardingParams.SetPARADEXETHEREUMACCOUNT(ethereumAddress)
+	onboardingParams.SetPARADEXSTARKNETACCOUNT(dexAccountAddress)
+	onboardingParams.SetPARADEXSTARKNETSIGNATURE(starknetSignature)
+	// Set request body for onboarding
+	onboardingParams.SetRequest(&models.RequestsOnboarding{
+		PublicKey: dexPublicKey,
+	})
+
+	onboardingResp, err := api.Authentication.Onboarding(onboardingParams)
+	if err != nil {
+		fmt.Printf("Onboarding failed: %v\n", err)
+	}
+	fmt.Printf("Onboarding successful: %v\n", onboardingResp.Code())
 
 	// // Step 3: Authenticate to get JWT token
 	// authParams := authentication.NewAuthParams()
