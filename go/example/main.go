@@ -10,6 +10,7 @@ import (
 	"github.com/tradeparadex/api/client"
 	"github.com/tradeparadex/api/client/account"
 	"github.com/tradeparadex/api/client/authentication"
+	"github.com/tradeparadex/api/client/orders"
 	"github.com/tradeparadex/api/client/system"
 	"github.com/tradeparadex/api/config"
 	"github.com/tradeparadex/api/models"
@@ -77,8 +78,10 @@ func main() {
 		MessageType:       "auth",
 		DexAccountAddress: dexAccountAddress,
 		DexPrivateKey:     dexPrivateKey,
-		TimestampStr:      timestampStr,
-		ExpirationStr:     expirationStr,
+		Params: map[string]interface{}{
+			"timestamp":  timestampStr,
+			"expiration": expirationStr,
+		},
 	})
 	authParams.SetPARADEXSTARKNETSIGNATURE(starknetJwtSignature)
 	authParams.SetPARADEXSTARKNETACCOUNT(dexAccountAddress)
@@ -103,4 +106,40 @@ func main() {
 	fmt.Println("Account Balance:")
 	fmt.Printf("  Balance details: %+v\n", balance.GetPayload().Results[0])
 	fmt.Println()
+
+	// Example 2: Place an order
+	orderParams := orders.NewOrdersNewParams()
+	market := "ETH-USD-PERP"
+	price := "1000"
+	size := "1"
+	now = time.Now().UnixMilli()
+	orderSignature := auth.SignSNTypedData(auth.SignerParams{
+		MessageType:       "order",
+		DexAccountAddress: dexAccountAddress,
+		DexPrivateKey:     dexPrivateKey,
+		Params: map[string]interface{}{
+			"timestamp": now,
+			"market":    market,
+			"side":      "BUY",
+			"orderType": "LIMIT",
+			"size":      size,
+			"price":     price,
+		},
+	})
+	orderParams.SetParams(&models.RequestsOrderRequest{
+		ClientID:           "client-id",
+		Type:               struct{ models.ResponsesOrderType }{models.ResponsesOrderType("LIMIT")},
+		Side:               struct{ models.ResponsesOrderSide }{models.ResponsesOrderSide("BUY")},
+		Market:             &market,
+		Price:              &price,
+		Size:               &size,
+		Signature:          &orderSignature,
+		SignatureTimestamp: &now,
+	})
+
+	orderResp, err := api.Orders.OrdersNew(orderParams, bearerAuth)
+	if err != nil {
+		fmt.Printf("Failed to place order: %v\n", err)
+	}
+	fmt.Printf("Order placed successfully: %v\n", orderResp.Code())
 }

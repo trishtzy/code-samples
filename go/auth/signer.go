@@ -12,8 +12,7 @@ type SignerParams struct {
 	MessageType       string
 	DexAccountAddress string
 	DexPrivateKey     string
-	TimestampStr      string
-	ExpirationStr     string
+	Params            map[string]interface{}
 }
 
 func SignSNTypedData(signerParams SignerParams) string {
@@ -38,8 +37,17 @@ func typedMessage(signerParams SignerParams) caigo.TypedMessage {
 			Method:     "POST",
 			Path:       "/v1/auth",
 			Body:       "",
-			Timestamp:  signerParams.TimestampStr,
-			Expiration: signerParams.ExpirationStr,
+			Timestamp:  signerParams.Params["timestamp"].(string),
+			Expiration: signerParams.Params["expiration"].(string),
+		}
+	case "order":
+		return &OrderPayload{
+			Timestamp: signerParams.Params["timestamp"].(int64),
+			Market:    signerParams.Params["market"].(string),
+			Side:      signerParams.Params["side"].(string),
+			OrderType: signerParams.Params["orderType"].(string),
+			Size:      signerParams.Params["size"].(string),
+			Price:     signerParams.Params["price"].(string),
 		}
 	default:
 		return nil
@@ -54,6 +62,8 @@ func verificationTypedData(messageType string) *caigo.TypedData {
 		verificationType = VerificationTypeOnboarding
 	case "auth":
 		verificationType = VerificationTypeAuth
+	case "order":
+		verificationType = VerificationTypeOrder
 	}
 
 	typedData, _ = NewVerificationTypedData(verificationType, config.App.GetChainIDName())
